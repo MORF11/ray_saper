@@ -2,6 +2,8 @@ package tls
 
 import (
 	"fmt"
+	"math"
+	"math/rand"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
@@ -16,6 +18,7 @@ type Btn struct {
 }
 
 var BtnSz int32 = 20
+var cntr float64 = 0
 
 func NewBtn(x int,y int,txt string) Btn {
 	return Btn{X:int32(x),Y:int32(y),Txt:txt}
@@ -86,11 +89,60 @@ func openAllNear(x int,y int,arr *[][]Btn) {
 func OpenZero(x int,y int,arr *[][]Btn) {
 	if y < 0 || y > len((*arr))-1 || x < 0 || x > len((*arr)[0])-1 || (*arr)[y][x].Txt != "" || (*arr)[y][x].IsOpen == true {return}
 	(*arr)[y][x].IsOpen = true
+
 	OpenZero(x+1,y,arr)
 	OpenZero(x-1,y,arr)
 	OpenZero(x,y-1,arr)
 	OpenZero(x,y+1,arr)
+	OpenZero(x+1,y+1,arr)
+	OpenZero(x-1,y-1,arr)
+	OpenZero(x+1,y-1,arr)
+	OpenZero(x-1,y+1,arr)
+
 	openAllNear(x,y,arr)
+}
+
+func ParseWin(arr *[][]Btn) bool {
+	for _,q := range *arr{
+		for _,w := range q{
+			if w.Txt != "*" && !w.IsOpen {return false}
+		}
+	}
+	return true
+}
+
+//tipa sharik na bg
+type Sharik struct {
+	X int32;
+	Y int32;
+	R float32;
+	C rl.Color;
+	Weight float32;
+}
+
+func NewSharik(x int32, y int32, r float32, c rl.Color,w float32) Sharik {
+	return Sharik{X:x,Y:y,R:r,C:c,Weight:w}
+}
+
+func (s Sharik) Dr() {
+	rl.DrawCircle(s.X,s.Y,s.R+float32(math.Abs(math.Sin(cntr)*float64(s.R))),s.C)
+}
+
+func (s *Sharik) Mv(v rl.Vector2) {
+	s.X -= int32(v.X/s.Weight)
+	s.Y -= int32(v.Y/s.Weight)
+	q := (v.X+v.Y)/10
+	// stranno vedut sebia s etim codom
+	// if q > 254 {q = 254}
+	// if q < 0 {q = 0}
+	s.C.R -= uint8(q)
+	s.C.G -= uint8(q)
+	s.C.B -= uint8(q)
+}
+
+func UpdSh() {
+	cntr += 0.01
+	if math.Abs(math.Sin(cntr)-math.Sin(0)) < 0.05 {cntr = 0} // esli primerno ravno 0 to obnuliaem ot stackoverflow
 }
 
 // otrisovka checkboxa
@@ -105,40 +157,55 @@ func checkBox(hb rl.Rectangle, text string,txtsz int32,checked bool) bool {
 }
 
 // menu vibora
-func MainMenu() (bool,bool,int,int,int) { // submit/net + xray + slozh + x + y
+func MainMenu() (bool,bool,int,int,int,int) { // submit/net + xray + slozh + x + y + shariki
 	rl.SetConfigFlags(rl.FlagWindowTopmost)
 	rl.InitWindow(200,400,"Saper")
 	rl.SetTargetFPS(30)
 	rl.SetWindowIcon(*rl.LoadImage("icon.png"))
 	var xrch,mch,hch,hdch bool
-	recs := []rl.Rectangle{rl.NewRectangle(10,10,30,30),rl.NewRectangle(10,50,30,30),rl.NewRectangle(10,90,30,30),rl.NewRectangle(10,130,30,30),rl.NewRectangle(10,170,30,30)}
-	// maprecs := []rl.Rectangle{rl.NewRectangle(10,10,30,30),rl.NewRectangle(10,50,30,30),rl.NewRectangle(10,90,30,30)}
-	subr := rl.NewRectangle(10,210,38,20)
 	ech := true
+	recs := []rl.Rectangle{rl.NewRectangle(10,10,30,30),rl.NewRectangle(10,50,30,30),rl.NewRectangle(10,90,30,30),rl.NewRectangle(10,130,30,30),rl.NewRectangle(10,170,30,30)}
+	subr := rl.NewRectangle(10,210,38,20)
+
+	sh := make([]Sharik,10)
+	for i:=0;i<10;i++ {
+		rc := uint8(rand.Intn(255))
+		sh[i] = NewSharik(rand.Int31n(200),rand.Int31n(400),float32(rand.Intn(20)+10),rl.NewColor(rc,rc,rc,254),float32(rand.Intn(9)+1))
+	}
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 
 		ms := rl.GetMousePosition()
+		msd := rl.GetMouseDelta()
 		
 		rl.ClearBackground(rl.Gray)
+		//shariki :p
+		for i:=0;i<10;i++{
+			sh[i].Dr()
+			sh[i].Mv(msd)
+		}
+		UpdSh()
+		
+		//checkboxi
 		if checkBox(recs[0],"Xray-vision",20,xrch) {xrch = !xrch}
 		if checkBox(recs[1],"Easy",20,ech) {ech = true;mch = false;hdch = false;hch = false;}
 		if checkBox(recs[2],"Medium",20,mch) {ech = false;mch = true;hdch = false;hch = false;}
 		if checkBox(recs[3],"Hard",20,hch) {ech = false;mch = false;hdch = false;hch = true;}
 		if checkBox(recs[4],"Harder",20,hdch) {ech = false;mch = false;hdch = true;hch = false;}
 		
+		//knopka nachala
 		rl.DrawRectangleRec(subr,rl.Black)
 		rl.DrawRectangleLinesEx(subr,2,rl.White)
 		rl.DrawText("start",15,215,10,rl.White)
 		if rl.IsMouseButtonPressed(rl.MouseButtonLeft) && ms.X	> float32(subr.X) && ms.X < float32(subr.X+subr.Width) && ms.Y > float32(subr.Y) && ms.Y < float32(subr.Y+subr.Height) {
-			if ech{return true,xrch,10,10,10}
-			if mch {return true,xrch,7,20,20}
-			if hch {return true,xrch,5,25,25}
-			if hdch{return true,xrch,3,30,30}
+			rl.CloseWindow()
+			if ech{return true,xrch,10,10,10,7+rand.Intn(3)-3}
+			if mch {return true,xrch,7,20,20,10+rand.Intn(3)-3}
+			if hch {return true,xrch,5,25,25,15+rand.Intn(3)-3}
+			if hdch{return true,xrch,3,30,30,20+rand.Intn(3)-3}
 		}
-		
 		
 		rl.EndDrawing()
 	}
-	return false,false,7,20,20
+	return false,false,7,20,20,7
 }

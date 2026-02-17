@@ -125,24 +125,26 @@ func NewSharik(x int32, y int32, r float32, c rl.Color,w float32) Sharik {
 }
 
 func (s Sharik) Dr() {
-	rl.DrawCircle(s.X,s.Y,s.R+float32(math.Abs(math.Sin(cntr)*float64(s.R))),s.C)
+	rl.DrawCircle(s.X,s.Y,s.R+float32(math.Abs(math.Sin(cntr)*float64(s.R)/2)),s.C)
 }
 
 func (s *Sharik) Mv(v rl.Vector2) {
 	s.X -= int32(v.X/s.Weight)
 	s.Y -= int32(v.Y/s.Weight)
-	q := (v.X+v.Y)/10
+	// q := (v.X+v.Y)/10
+
 	// stranno vedut sebia s etim codom
 	// if q > 254 {q = 254}
 	// if q < 0 {q = 0}
-	s.C.R -= uint8(q)
-	s.C.G -= uint8(q)
-	s.C.B -= uint8(q)
+	
+	// s.C.R -= uint8(q)
+	// s.C.G -= uint8(q)
+	// s.C.B -= uint8(q)
 }
 
 func UpdSh() {
 	cntr += 0.01
-	if math.Abs(math.Sin(cntr)-math.Sin(0)) < 0.05 {cntr = 0} // esli primerno ravno 0 to obnuliaem ot stackoverflow
+	// if math.Abs(math.Sin(cntr)-math.Sin(0)) < 0.05 {cntr = 0} // esli primerno ravno 0 to obnuliaem ot stackoverflow
 }
 
 // otrisovka checkboxa
